@@ -4,7 +4,8 @@
 #include <cstring>
 #include <assert.h>
 
-#define POEM "poem.txt"
+const char POEM[] = "poem.txt";
+const int  SORRY  = -1;  // See below :)
 
 using namespace std;
 
@@ -81,49 +82,55 @@ int main(int argc, char* argv[])
     if(argc > 1)
         file_name = argv[1];
     else
-        file_name = POEM;
+        file_name = POEM;  // Кстати, можно в этом случае со stdin читать.
 
     //Reading from file
-    char* poem_in_line = FileRead(file_name);
+    char* poem_in_line = FileRead(file_name);  // Советую в функцию подавать файл уже открытым, тогда можно будет пропихнуть stdin.
     //If nothing hive been read
     if(poem_in_line == nullptr)
-        return -1;
+        return SORRY;  // :)
 
     //Breaking line into pieces
     int* lines_positions = Parser(poem_in_line);
 
-    //Array before
+    //Array before  // Тот случай, когда комментарий не нужен :)
     Printer(poem_in_line, lines_positions, "Before");
-    //Sort
+    //Sort          // То же)
     BeginSort(poem_in_line, lines_positions);
-    //Array after
+    //Array after   // То же)
     Printer(poem_in_line, lines_positions, "After");
 
-    //Preserv
+    // Free the resources (было Preserve - это "сохранять")
     delete [] poem_in_line;
     poem_in_line = nullptr;
     delete [] lines_positions;
     lines_positions = nullptr;
+    
+    return 0;
 }
 
 //================================================================
 
 char* FileRead(const char* file_name)
 {
-    FILE *i_file = fopen(file_name, "r");
+    FILE *i_file = fopen(file_name, "r");  // А почему i_? Input? М.б. и назвать input?
     if(i_file == nullptr){
         cout << "File not found!" << endl;
         return nullptr;
     }
 
-    fseek(i_file, 0, SEEK_END);
-    int file_size = ftell(i_file);
+    fseek(i_file, 0, SEEK_END);     // Проверяй возвр. значение. Мало ли, вызов сбился
+    int file_size = ftell(i_file);  // Он может быть и EOF в случае ошибки
 
     char* poem_in_line = nullptr;
+    
     try{
         poem_in_line = new char [file_size];
-    }catch(bad_alloc){
-        cout << "In main.cpp: FileRead(): Bad allocation. Cannot allocate " << file_size << " bytes." << endl;
+    }
+    
+    catch(const bad_alloc& ex){
+        cout << "In " << __FILE__ << ": " << __func__ << "(): " << ex.what() << ". Cannot allocate " << file_size << " bytes." << endl;
+        //   \-------------это можно завернуть в дефайн-----------------------/
         return nullptr;
     }
 
@@ -134,12 +141,12 @@ char* FileRead(const char* file_name)
     return poem_in_line;
 }
 
-int* Parser(char* line_to_parse)
+int* Parse(char* line_to_parse)
 {
     //Exceptions
     assert(line_to_parse != nullptr);
 
-    //Running through the line with the poem
+    //Running through the line with the poem  -- это чтобы строчки посчитать? Сделай функцию
     int n_lines = 0;
     int pos_in_line = 0;
     while(line_to_parse[pos_in_line] != '\0'){
@@ -150,14 +157,17 @@ int* Parser(char* line_to_parse)
 
     //Creating array with lines' coordinates
     int* lines_positions = nullptr;
+    
     try{
         lines_positions = new int [n_lines + 1];
-    }catch(bad_alloc){
+    }
+    
+    catch(bad_alloc){  // see above
         cout << "In main.cpp: Parser(): Bad allocation. Cannot allocate " << n_lines << " bytes." << endl;
         return nullptr;
     }
 
-    //Firs line starts immidiatety
+    //Firs line starts immidiately
     lines_positions[0] = 0;
 
     //Runnnig through the line again
@@ -171,13 +181,14 @@ int* Parser(char* line_to_parse)
         }
         pos_in_line++;
     }
-    //Array with positions of lines ends with (-1) (used as terminator)
+    
+    //Array with positions of lines ends with (-1) (used as Terminator. I'll be back! Yours, Arny Schwartz....)  :)
     lines_positions[n_lines] = -1;
 
     return lines_positions;
 }
 
-void BeginSort(char* poem, int* lines_positions)
+void BeginSort(char* poem, int* lines_positions)  // Сделай еще и через qsort (стд. ф-я). В одну строку будет вызов
 {
     //Exceptions
     assert(poem != nullptr);
@@ -211,6 +222,9 @@ int  BinSearch(char* arr_sorted, int* lines_positions, int start_pos, int end_po
     assert(end_pos >= 0);
 
     while(start_pos != end_pos){
+        
+        assert (start_pos < end_pos); // THIS IS <s>SPARTA!!!</s> LOOP INVARIANT
+            
         int middle_pos = (start_pos + end_pos)/2;
         char* middle_line = GetPoemLine(arr_sorted, lines_positions, middle_pos);
 
@@ -222,7 +236,7 @@ int  BinSearch(char* arr_sorted, int* lines_positions, int start_pos, int end_po
     return start_pos;
 }
 
-char* GetPoemLine(char* poem, int* lines_positions, int line_pos)
+char* GetPoemLine(char* poem, int* lines_positions, int line_pos)  // Что-то выше уже подобное было
 {
     //Exceptions
     assert(poem != nullptr);
@@ -235,20 +249,25 @@ char* GetPoemLine(char* poem, int* lines_positions, int line_pos)
         line_len++;
 
     char* line = nullptr;
+    
     try{
         line = new char [line_len + 1];
-    }catch(bad_alloc){
+    }
+    
+    catch(bad_alloc){
         cout << "In main.cpp: GetPoemLine(): Bad allocation. Cannot allocate " << line_len << " bytes." << endl;
         return nullptr;
     }
 
-    //Creating line
+    //Creating the line
+    
     line_len = 0;
     while(poem[lines_positions[line_pos] + line_len] != '\n' &&
           poem[lines_positions[line_pos] + line_len] != '\0'){
         line[line_len] = poem[lines_positions[line_pos] + line_len];
         line_len++;
     }
+    
     //Last character is '\0'
     line[line_len] = '\0';
 
@@ -271,7 +290,7 @@ void ElemInsert(int* arr_to_ins_in, int start_pos, int end_pos,
     arr_to_ins_in[new_elem_pos] = new_elem_value;
 }
 
-void Printer(char* poem, int* lines_positions, char* label)
+void Print(char* poem, int* lines_positions, char* label)
 {
     //Exceptions
     assert(poem != nullptr);
