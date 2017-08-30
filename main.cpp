@@ -1,7 +1,7 @@
 #include <iostream>
 #include <cstdio>
 #include <fstream>
-#include <string>
+#include <cstring>
 #include <assert.h>
 
 #define POEM "poem.txt"
@@ -16,7 +16,8 @@ using namespace std;
 char* FileRead(const char* file_name);
 
 /// Parses line.
-/** Returns array with positions of beginnings of lines.
+/**
+    Returns array with positions of beginnings of lines.
 
     \param line_to_parse Line to be broken into lines.
     \warning Array ends with (-1) as terminator.
@@ -30,7 +31,48 @@ int* Parser(char* line_to_parse);
     \param poem Whole poem in one line.
     \param lines_positions Array with beginnings of lines.
 */
-int* BeginSort(char* poem, int* lines_positions);
+void BeginSort(char* poem, int* lines_positions);
+
+/// BinSearch.
+/**
+    \param [in, out] arr_sorted Sorted part of array.
+    \param [in] lines_positions Posotions of beginnings of lines.
+    \param [in] start_pos Start position.
+    \param [in] end_pos Last position.
+    \param [in] curr_line_value Value of current line.
+*/
+int  BinSearch(char* arr_sorted, int* lines_positions, int start_pos, int end_pos, char* curr_line_value);
+
+/// Gets line from poem.
+/**
+    \param [in] poem Poem in line.
+    \param [in] lines_positions Positions of beginnings of lines.
+    \param [in] line_pos Number of line to get.
+*/
+char* GetPoemLine(char* poem, int* lines_positions, int line_pos);
+
+/// Inserts element in array.
+/**
+    Places element between start_pos and end_pos.
+
+    \param [in, out] arr_to_ins_in Array where new element inserts
+    \param [in] start_pos First position of insert area.
+    \param [in] end_pos Last position of insert area.
+    \param [in] new_elem_pos New element's position.
+    \param [in] new_elem_value Value of element to insert.
+*/
+void ElemInsert(int* arr_to_ins_in, int start_pos, int end_pos,
+                int new_elem_pos, int new_elem_value);
+
+/// Prints poem.
+/**
+    \param [in] poem Poem to print.
+    \param [in] lines_positions Array with beginnings of lines.
+    \param [in] label Extra information.
+*/
+void Printer(char* poem, int* lines_positions, char* label = "Array");
+
+//================================================================
 
 int main(int argc, char* argv[])
 {
@@ -50,15 +92,18 @@ int main(int argc, char* argv[])
     //Breaking line into pieces
     int* lines_positions = Parser(poem_in_line);
 
+    //Array before
+    Printer(poem_in_line, lines_positions, "Before");
     //Sort
-    int* lines_sorted = BeginSort(poem_in_line, lines_positions);
-    /*
-    int counter = 0;
-    while(lines_positions[counter] != -1){
-        cout << lines_positions[counter] << "\t" << poem_in_line[lines_positions[counter]] << endl;
-        counter++;
-    }
-    */
+    BeginSort(poem_in_line, lines_positions);
+    //Array after
+    Printer(poem_in_line, lines_positions, "After");
+
+    //Preserv
+    delete [] poem_in_line;
+    poem_in_line = nullptr;
+    delete [] lines_positions;
+    lines_positions = nullptr;
 }
 
 //================================================================
@@ -132,11 +177,111 @@ int* Parser(char* line_to_parse)
     return lines_positions;
 }
 
-int* BeginSort(char* poem, int* lines_positions)
+void BeginSort(char* poem, int* lines_positions)
 {
     //Exceptions
     assert(poem != nullptr);
     assert(lines_positions != nullptr);
 
-    //Sort
+    //Sort (InsertBinSort)
+    //Running through array with positions untill it ends
+    int current_line_pos = 1;
+    while(lines_positions[current_line_pos] != (-1)){
+        //Getting line's value
+        char* current_line_value = GetPoemLine(poem, lines_positions, current_line_pos);
+
+        //Finding new position
+        int new_line_pos = BinSearch(poem, lines_positions, 0, current_line_pos, current_line_value);
+        //Inserting line
+        ElemInsert(lines_positions, 0, current_line_pos, new_line_pos, lines_positions[current_line_pos]);
+
+        //Going for next element
+        current_line_pos++;
+    }
+}
+
+int  BinSearch(char* arr_sorted, int* lines_positions, int start_pos, int end_pos, char* curr_line_value)
+{
+    //Exceptions
+    assert(arr_sorted != nullptr);
+    assert(lines_positions != nullptr);
+    assert(curr_line_value != nullptr);
+    assert(end_pos >= start_pos);
+    assert(start_pos >= 0);
+    assert(end_pos >= 0);
+
+    while(start_pos != end_pos){
+        int middle_pos = (start_pos + end_pos)/2;
+        char* middle_line = GetPoemLine(arr_sorted, lines_positions, middle_pos);
+
+        if(strcmp(curr_line_value, middle_line) > 0)
+            start_pos = middle_pos + 1;
+        else
+            end_pos = middle_pos;
+    }
+    return start_pos;
+}
+
+char* GetPoemLine(char* poem, int* lines_positions, int line_pos)
+{
+    //Exceptions
+    assert(poem != nullptr);
+    assert(lines_positions != nullptr);
+
+    //Counting line's length
+    int line_len = 0;
+    while(poem[lines_positions[line_pos] + line_len] != '\n' &&
+          poem[lines_positions[line_pos] + line_len] != '\0')
+        line_len++;
+
+    char* line = nullptr;
+    try{
+        line = new char [line_len + 1];
+    }catch(bad_alloc){
+        cout << "In main.cpp: GetPoemLine(): Bad allocation. Cannot allocate " << line_len << " bytes." << endl;
+        return nullptr;
+    }
+
+    //Creating line
+    line_len = 0;
+    while(poem[lines_positions[line_pos] + line_len] != '\n' &&
+          poem[lines_positions[line_pos] + line_len] != '\0'){
+        line[line_len] = poem[lines_positions[line_pos] + line_len];
+        line_len++;
+    }
+    //Last character is '\0'
+    line[line_len] = '\0';
+
+    return line;
+}
+
+void ElemInsert(int* arr_to_ins_in, int start_pos, int end_pos,
+                int new_elem_pos, int new_elem_value)
+{
+    //Exceptions
+    assert(arr_to_ins_in != nullptr);
+    assert(start_pos >= 0);
+    assert(end_pos >= 0);
+    assert(end_pos >= start_pos);
+    assert(new_elem_pos >= start_pos);
+    assert(new_elem_pos <=  end_pos);
+
+    for(int i = end_pos; i > new_elem_pos; i--)
+        arr_to_ins_in[i] = arr_to_ins_in[i - 1];
+    arr_to_ins_in[new_elem_pos] = new_elem_value;
+}
+
+void Printer(char* poem, int* lines_positions, char* label)
+{
+    //Exceptions
+    assert(poem != nullptr);
+    assert(lines_positions != nullptr);
+    assert(label != nullptr);
+
+    cout << "  !" << label << endl;
+    int i = 0;
+    while(lines_positions[i] != (-1)){
+        cout << GetPoemLine(poem, lines_positions, i) << endl;
+        i++;
+    }
 }
