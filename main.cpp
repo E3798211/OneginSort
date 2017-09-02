@@ -4,7 +4,10 @@
 #include <cstring>
 #include <assert.h>
 
-#define POEM "poem.txt"
+#define ERR_WHERE "In " << __FILE__ << ": " << __func__ << "(): " << ex.what()
+
+const char POEM[] = "poem.txt";
+const int SORRY   = -1;
 
 using namespace std;
 
@@ -22,7 +25,7 @@ char* FileRead(const char* file_name);
     \param line_to_parse Line to be broken into lines.
     \warning Array ends with (-1) as terminator.
 */
-int* Parser(char* line_to_parse);
+int* Parse(char* line_to_parse);
 
 /// Sorts array based on the beginnings of lines.
 /**
@@ -70,14 +73,24 @@ void ElemInsert(int* arr_to_ins_in, int start_pos, int end_pos,
     \param [in] lines_positions Array with beginnings of lines.
     \param [in] label Extra information.
 */
-void Printer(char* poem, int* lines_positions, char* label = "Array");
+void Print(char* poem, int* lines_positions, char* label = "Array");
+
+/// Counts amount of lines in poem.
+/**
+    \param [in] line_to_parse Poem written in one line.
+*/
+int LinesCount(char* line_to_parse);
+
+
+/// Compares lines from the beginning.
+int beg_comp(const void* f_line, const void* s_line);
 
 //================================================================
 
 int main(int argc, char* argv[])
 {
     //Checking if User wants to choose another file
-    char* file_name = nullptr;
+    const char* file_name = nullptr;
     if(argc > 1)
         file_name = argv[1];
     else
@@ -87,19 +100,28 @@ int main(int argc, char* argv[])
     char* poem_in_line = FileRead(file_name);
     //If nothing hive been read
     if(poem_in_line == nullptr)
-        return -1;
+        return SORRY;
 
     //Breaking line into pieces
-    int* lines_positions = Parser(poem_in_line);
+    int* lines_positions = Parse(poem_in_line);
 
-    //Array before
-    Printer(poem_in_line, lines_positions, "Before");
-    //Sort
+    Print(poem_in_line, lines_positions, "Before");
     BeginSort(poem_in_line, lines_positions);
-    //Array after
-    Printer(poem_in_line, lines_positions, "After");
+    /*
+    qsort(lines_positions, LinesCount(poem_in_line), sizeof(int),
+            [=](const void* s_1, const void* s_2) -> int
+            {
+                char* line_1 = GetPoemLine(poem_in_line, lines_positions, *(int*)s_1);
+                char* line_2 = GetPoemLine(poem_in_line, lines_positions, *(int*)s_2);
 
-    //Preserv
+                if(strcmp(line_1, line_2) > 0)  return 1;
+                if(strcmp(line_1, line_2) < 0)  return -1;
+                return 0;
+            });
+    */
+    Print(poem_in_line, lines_positions, "After");
+
+    //Free the resourses
     delete [] poem_in_line;
     poem_in_line = nullptr;
     delete [] lines_positions;
@@ -110,58 +132,59 @@ int main(int argc, char* argv[])
 
 char* FileRead(const char* file_name)
 {
-    FILE *i_file = fopen(file_name, "r");
-    if(i_file == nullptr){
+    FILE *input = fopen(file_name, "r");
+    if(input == nullptr){
         cout << "File not found!" << endl;
         return nullptr;
     }
 
-    fseek(i_file, 0, SEEK_END);
-    int file_size = ftell(i_file);
+    if(fseek(input, 0, SEEK_END)){
+        cout << "Can not set last position in " << file_name << endl;
+        return nullptr;
+    }
+
+    int file_size = ftell(input);
+    if(file_size == EOF){
+        cout << "Can not get pointer's position in " << file_name << endl;
+        return nullptr;
+    }
 
     char* poem_in_line = nullptr;
     try{
         poem_in_line = new char [file_size];
-    }catch(bad_alloc){
-        cout << "In main.cpp: FileRead(): Bad allocation. Cannot allocate " << file_size << " bytes." << endl;
+    }catch(const bad_alloc& ex){
+        cout << ERR_WHERE << ". Cannot allocate " << file_size << " bytes." << endl;
         return nullptr;
     }
 
-    rewind(i_file);
-    int n_chars = fread(poem_in_line, 1, file_size, i_file);
+    rewind(input);
+    int n_chars = fread(poem_in_line, 1, file_size, input);
 
-    fclose(i_file);
+    fclose(input);
     return poem_in_line;
 }
 
-int* Parser(char* line_to_parse)
+int* Parse(char* line_to_parse)
 {
     //Exceptions
     assert(line_to_parse != nullptr);
 
-    //Running through the line with the poem
-    int n_lines = 0;
-    int pos_in_line = 0;
-    while(line_to_parse[pos_in_line] != '\0'){
-        if(line_to_parse[pos_in_line] == '\n')
-            n_lines++;
-        pos_in_line++;
-    }
+    int n_lines = LinesCount(line_to_parse);
 
     //Creating array with lines' coordinates
     int* lines_positions = nullptr;
     try{
         lines_positions = new int [n_lines + 1];
-    }catch(bad_alloc){
-        cout << "In main.cpp: Parser(): Bad allocation. Cannot allocate " << n_lines << " bytes." << endl;
+    }catch(const bad_alloc& ex){
+        cout << ERR_WHERE << ". Cannot allocate " << n_lines + 1 << " bytes." << endl;
         return nullptr;
     }
 
-    //Firs line starts immidiatety
+    //First line starts immidiately
     lines_positions[0] = 0;
 
-    //Runnnig through the line again
-    pos_in_line = 0;
+    //Runnnig through the line_to_parse
+    int pos_in_line = 0;
     int line_beg_num = 1;
     while(line_to_parse[pos_in_line] != '\0'){
         if(line_to_parse[pos_in_line] == '\n'){
@@ -211,6 +234,9 @@ int  BinSearch(char* arr_sorted, int* lines_positions, int start_pos, int end_po
     assert(end_pos >= 0);
 
     while(start_pos != end_pos){
+
+        assert(start_pos < end_pos);
+
         int middle_pos = (start_pos + end_pos)/2;
         char* middle_line = GetPoemLine(arr_sorted, lines_positions, middle_pos);
 
@@ -237,8 +263,8 @@ char* GetPoemLine(char* poem, int* lines_positions, int line_pos)
     char* line = nullptr;
     try{
         line = new char [line_len + 1];
-    }catch(bad_alloc){
-        cout << "In main.cpp: GetPoemLine(): Bad allocation. Cannot allocate " << line_len << " bytes." << endl;
+    }catch(const bad_alloc& ex){
+        cout << ERR_WHERE << ". Cannot allocate " << line_len + 1 << " bytes." << endl;
         return nullptr;
     }
 
@@ -271,7 +297,7 @@ void ElemInsert(int* arr_to_ins_in, int start_pos, int end_pos,
     arr_to_ins_in[new_elem_pos] = new_elem_value;
 }
 
-void Printer(char* poem, int* lines_positions, char* label)
+void Print(char* poem, int* lines_positions, char* label)
 {
     //Exceptions
     assert(poem != nullptr);
@@ -285,3 +311,26 @@ void Printer(char* poem, int* lines_positions, char* label)
         i++;
     }
 }
+
+int LinesCount(char* line_to_parse)
+{
+    int n_lines = 0;
+    int pos_in_line = 0;
+    while(line_to_parse[pos_in_line] != '\0'){
+        if(line_to_parse[pos_in_line] == '\n')
+            n_lines++;
+        pos_in_line++;
+    }
+    return n_lines;
+}
+
+int beg_comp(const void* f_line, const void* s_line)
+{
+    if(strcmp(*(char**)f_line, *(char**)s_line) < 0)
+        return -1;
+    if(strcmp(*(char**)f_line, *(char**)s_line) > 0)
+        return 1;
+    return 0;
+}
+
+
