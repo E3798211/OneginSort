@@ -4,7 +4,7 @@
 #include <cstring>
 #include <assert.h>
 
-#define ERR_WHERE "In " << __FILE__ << ": " << __func__ << "(): " << ex.what()
+#define ERR_WHERE(ex)  "In " << __FILE__ << ": " << __func__ << "(): " << (ex).what()
 
 const char POEM[] = "poem.txt";
 const int SORRY   = -1;
@@ -115,23 +115,21 @@ char** Parse_v2(char* line_to_parse);
 int main(int argc, char* argv[])
 {
     //Checking if User wants to choose another file
-    const char* file_name = nullptr;
-    if(argc > 1)
-        file_name = argv[1];
-    else
-        file_name = POEM;
+
+    const char* file_name = (argc > 1)? argv[1] : POEM;  // косметика
 
     //Reading from file
-    char* poem_in_line = FileRead(file_name);
-    //If nothing hive been read
-    if(poem_in_line == nullptr)
-        return SORRY;
 
-    char** lines_positions = Parse_v2(poem_in_line);
+    char* buffer = FileRead(file_name);  // Будь проще :)
 
-    Print(lines_positions, "Before");
-    qsort(lines_positions, LinesCount(poem_in_line), sizeof(char*), BegComp);
-    Print(lines_positions, "After");
+    //If nothing hive been read...
+    if(!buffer) return SORRY;
+
+    char** text = Parse_v2(buffer);      // Будь проще :)
+
+    Print(text, "Before");
+    qsort(text, LinesCount(buffer), sizeof(char*), BegComp);
+    Print(text, "After");
 
     /*
     //Breaking line into pieces
@@ -143,10 +141,9 @@ int main(int argc, char* argv[])
     */
 
     //Free the resourses
-    delete [] poem_in_line;
-    poem_in_line = nullptr;
-    delete [] lines_positions;
-    lines_positions = nullptr;
+    delete [] buffer; buffer = nullptr;
+    delete [] text;   text   = nullptr;
+
     //delete [] lines_position;
     //lines_position = nullptr;
 }
@@ -155,37 +152,49 @@ int main(int argc, char* argv[])
 
 char* FileRead(const char* file_name)
 {
+    assert (file_name);
+
+    errno = 0;
+
     FILE *input = fopen(file_name, "r");
     if(input == nullptr){
-        cout << "File not found!" << endl;
+        if (Debug) cerr << "File not found!" << endl;  // Здесь тоже нужно ERR_WHERE
         return nullptr;
     }
 
     if(fseek(input, 0, SEEK_END)){
-        cout << "Can not set last position in " << file_name << endl;
+        if (Debug) cerr << "Can not set last position in " << file_name << endl;  // Здесь тоже нужно ERR_WHERE
+        // Надо закрыть файл!
         return nullptr;
     }
 
     int file_size = ftell(input);
     if(file_size == EOF){
-        cout << "Can not get pointer's position in " << file_name << endl;
+        if (Debug) cerr << "Can not get pointer's position in " << file_name << endl; // Здесь тоже нужно ERR_WHERE
+        // Надо закрыть файл!
         return nullptr;
     }
 
     char* poem_in_line = nullptr;
+
     try{
         poem_in_line = new char [file_size];
-    }catch(const bad_alloc& ex){
-        cout << ERR_WHERE << ". Cannot allocate " << file_size << " bytes." << endl;
+    }catch(const bad_alloc& ex){  // Не пиши catch с таким форматированием. Весь текст сливается,
+                                  // плохо читается, catch не видно
+        if (Debug) cerr << ERR_WHERE (ex) << ". Cannot allocate " << file_size << " bytes." << endl;
+        // Надо закрыть файл!
         return nullptr;
     }
 
     rewind(input);
-    int n_chars = fread(poem_in_line, 1, file_size, input);
+    int n_chars = fread(poem_in_line, 1, file_size, input);  // n_chars не используется
 
     fclose(input);
+
     return poem_in_line;
 }
+
+// Пропускаю в ревью, т.к. есть v2
 
 int* Parse(char* line_to_parse)
 {
@@ -223,6 +232,8 @@ int* Parse(char* line_to_parse)
     return lines_positions;
 }
 
+// Пропускаю в ревью, т.к. есть v2
+
 void BeginSort(char* poem, int* lines_positions)
 {
     //Exceptions
@@ -245,6 +256,8 @@ void BeginSort(char* poem, int* lines_positions)
         current_line_pos++;
     }
 }
+
+// Пропускаю в ревью, т.к. есть v2
 
 int  BinSearch(char* arr_sorted, int* lines_positions, int start_pos, int end_pos, char* curr_line_value)
 {
@@ -270,6 +283,8 @@ int  BinSearch(char* arr_sorted, int* lines_positions, int start_pos, int end_po
     }
     return start_pos;
 }
+
+// Пропускаю в ревью, т.к. есть v2
 
 char* GetPoemLine(char* poem, int* lines_positions, int line_pos)
 {
@@ -318,8 +333,8 @@ char* GetPoemLine(char* line_beg)
     char* line = nullptr;
     try{
         line = new char [line_len + 1];
-    }catch(const bad_alloc& ex){
-        cout << ERR_WHERE << ". Cannot allocate " << line_len + 1 << " bytes." << endl;
+    }catch(const bad_alloc& ex){ // См. выше про формат
+        cout << ERR_WHERE (ex) << ". Cannot allocate " << line_len + 1 << " bytes." << endl;
         return nullptr;
     }
 
@@ -335,6 +350,8 @@ char* GetPoemLine(char* line_beg)
 
     return line;
 }
+
+// Пропускаю в ревью, т.к. есть v2
 
 void ElemInsert(int* arr_to_ins_in, int start_pos, int end_pos,
                 int new_elem_pos, int new_elem_value)
@@ -352,7 +369,9 @@ void ElemInsert(int* arr_to_ins_in, int start_pos, int end_pos,
     arr_to_ins_in[new_elem_pos] = new_elem_value;
 }
 
-void Print(char* poem, int* lines_positions, char* label)
+// Пропускаю в ревью, т.к. есть v2
+
+void Print(const char* poem, int* lines_positions, const char* label)
 {
     //Exceptions
     assert(poem != nullptr);
@@ -360,28 +379,24 @@ void Print(char* poem, int* lines_positions, char* label)
     assert(label != nullptr);
 
     cout << "  !" << label << endl;
-    int i = 0;
-    while(lines_positions[i] != (-1)){
+
+    for (int i = 0; lines_positions[i] != -1; i++)
         cout << GetPoemLine(poem, lines_positions, i) << endl;
-        i++;
-    }
 }
 
-void Print(char** lines_positions, char* label)
+void Print(const char* const* text, const char* label)
 {
     //Exceptions
-    assert(lines_positions != nullptr);
+    assert(text != nullptr);
     assert(label != nullptr);
 
     cout << "  !" << label << endl;
-    int i = 0;
-    while(lines_positions[i] != nullptr){
-        cout << GetPoemLine(lines_positions[i]) << endl;
-        i++;
-    }
+
+    for (int i = 0; text[i]; i++)
+        cout << text[i] << endl;
 }
 
-int LinesCount(char* line_to_parse)
+int LinesCount(const char* line_to_parse)
 {
     int n_lines = 0;
     int pos_in_line = 0;
