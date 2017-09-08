@@ -112,6 +112,11 @@ char** Parse_v2(char* line_to_parse);
 
 //================================================================
 
+struct Line{
+    int lengh = 0;
+    char* line_beg = nullptr;
+};
+
 int main(int argc, char* argv[])
 {
     //Checking if User wants to choose another file
@@ -132,6 +137,8 @@ int main(int argc, char* argv[])
     Print(lines_positions, "Before");
     qsort(lines_positions, LinesCount(poem_in_line), sizeof(char*), BegComp);
     Print(lines_positions, "After");
+
+
 
     /*
     //Breaking line into pieces
