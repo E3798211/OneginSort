@@ -13,7 +13,7 @@ using namespace std;
 
 struct Line{
     int lengh = 0;
-    char* line_beg = nullptr;
+    char* beg = nullptr;
 };
 
 
@@ -45,14 +45,6 @@ int LinesCount(char* line_to_parse);
 
 /// Compares lines from the beginning.
 int BegComp(const void* f_line, const void* s_line);
-
-/// Parses line.
-/**
-    Returns array with pointers to beginnings of the lines,
-
-    \param [in] line_to_parse Line to be broken into lines.
-*/
-char** Parse_v2(char* line_to_parse);
 
 /// Parses line.
 Line* Parse(char* line_to_parse);
@@ -198,42 +190,6 @@ int BegComp(const void* f_line, const void* s_line)
     return 0;
 }
 
-char** Parse_v2(char* line_to_parse)
-{
-    //Exceptions
-    assert(line_to_parse != nullptr);
-
-    int n_lines = LinesCount(line_to_parse);
-
-    //Creating array with lines' coordinates
-    char** lines_positions = nullptr;
-    try{
-        lines_positions = new char* [n_lines + 1];
-    }catch(const bad_alloc& ex){
-        cout << ERR_WHERE << ". Cannot allocate " << n_lines + 1 << " bytes." << endl;
-        return nullptr;
-    }
-
-    //First line starts immidiately
-    lines_positions[0] = line_to_parse;
-
-    //Runnnig through the line_to_parse
-    int pos_in_line = 0;
-    int line_beg_num = 1;
-    while(line_to_parse[pos_in_line] != '\0'){
-        if(line_to_parse[pos_in_line] == '\n'){
-            //Remembering position and going for the next line
-            lines_positions[line_beg_num] = line_to_parse + pos_in_line + 1;
-            line_beg_num++;
-        }
-        pos_in_line++;
-    }
-    //Array with positions of lines ends with (-1) (used as terminator)
-    lines_positions[n_lines] = nullptr;
-
-    return lines_positions;
-}
-
 Line* Parse(char* line_to_parse)
 {
     //Exceptions
@@ -251,7 +207,7 @@ Line* Parse(char* line_to_parse)
     }
 
     //First line starts immidiately
-    lines_positions[0].line_beg = line_to_parse;
+    lines_positions[0].beg = line_to_parse;
 
     //Runnnig through the line_to_parse
     int pos_in_line = 0;
@@ -259,17 +215,17 @@ Line* Parse(char* line_to_parse)
     while(line_to_parse[pos_in_line] != '\0'){
         if(line_to_parse[pos_in_line] == '\n'){
             //Remembering position and going for the next line
-            lines_positions[line_beg_num].line_beg = line_to_parse + pos_in_line + 1;
-            lines_positions[line_beg_num].lengh = lines_positions[line_beg_num].line_beg -
-                                                  lines_positions[line_beg_num - 1].line_beg;
+            lines_positions[line_beg_num].beg = line_to_parse + pos_in_line + 1;
+            lines_positions[line_beg_num - 1].lengh = lines_positions[line_beg_num].beg -
+                                                      lines_positions[line_beg_num - 1].beg - 1;
             line_beg_num++;
         }
         pos_in_line++;
     }
-    //First line didn't have length
-    lines_positions[0].lengh = lines_positions[1].line_beg - lines_positions[0].line_beg - 1;
+    //Last one has wrong lengh
+    lines_positions[n_lines - 1].lengh = lines_positions[n_lines].beg - lines_positions[n_lines - 1].beg - 1;
     //Array with positions of lines ends with (nullptr) (used as terminator)
-    lines_positions[n_lines].line_beg = nullptr;
+    lines_positions[n_lines].beg = nullptr;
 
     return lines_positions;
 }
@@ -282,9 +238,8 @@ void Print(Line* lines_positions, char* label)
 
     cout << "  !" << label << endl;
     int i = 0;
-    while(lines_positions[i].line_beg != nullptr){
-        cout << GetPoemLine(lines_positions[i].line_beg) << endl;
-        cout << lines_positions[i].lengh << endl;
+    while(lines_positions[i].beg != nullptr){
+        cout << GetPoemLine(lines_positions[i].beg) << endl;
         i++;
     }
 }
