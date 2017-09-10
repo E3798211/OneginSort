@@ -25,6 +25,9 @@ struct Line{
 char* FileRead(const char* file_name);
 
 /// Gets line from poem.
+/**
+    \param [in] line_beg Pointer to the beginning of the line.
+*/
 char* GetPoemLine(char* line_beg);
 
 /// Prints poem.
@@ -34,7 +37,6 @@ char* GetPoemLine(char* line_beg);
     \param [in] lines_positions Pointers to the positions of lines.
     \param [in] label Your comment.
 */
-void Print(char** lines_positions, char* label = "Array");
 void Print(Line* lines_positions, char* label = "Array");
 
 /// Counts amount of lines in poem.
@@ -47,6 +49,9 @@ int LinesCount(char* line_to_parse);
 int BegComp(const void* f_line, const void* s_line);
 
 /// Parses line.
+/**
+    \param [in] line_to_parse Whole poem.
+*/
 Line* Parse(char* line_to_parse);
 
 //================================================================
@@ -67,23 +72,17 @@ int main(int argc, char* argv[])
     if(poem_in_line == nullptr)
         return SORRY;
 
-    /*
-    char** lines_positions = Parse_v2(poem_in_line);
-
-    Print(lines_positions, "Before");
-    qsort(lines_positions, LinesCount(poem_in_line), sizeof(char*), BegComp);
-    Print(lines_positions, "After");
-    */
-
     Line* lines_positions = Parse(poem_in_line);
 
     Print(lines_positions, "Before");
+    qsort(lines_positions, LinesCount(poem_in_line), sizeof(Line), BegComp);
+    Print(lines_positions, "After");
 
     //Free the resourses
     delete [] poem_in_line;
     poem_in_line = nullptr;
-    //delete [] lines_positions;
-    //lines_positions = nullptr;
+    delete [] lines_positions;
+    lines_positions = nullptr;
 }
 
 //================================================================
@@ -154,20 +153,6 @@ char* GetPoemLine(char* line_beg)
     return line;
 }
 
-void Print(char** lines_positions, char* label)
-{
-    //Exceptions
-    assert(lines_positions != nullptr);
-    assert(label != nullptr);
-
-    cout << "  !" << label << endl;
-    int i = 0;
-    while(lines_positions[i] != nullptr){
-        cout << GetPoemLine(lines_positions[i]) << endl;
-        i++;
-    }
-}
-
 int LinesCount(char* line_to_parse)
 {
     int n_lines = 0;
@@ -182,12 +167,10 @@ int LinesCount(char* line_to_parse)
 
 int BegComp(const void* f_line, const void* s_line)
 {
-    char* line_1 = GetPoemLine(*(char**)f_line);
-    char* line_2 = GetPoemLine(*(char**)s_line);
+    Line* line_1 = (Line*)f_line;
+    Line* line_2 = (Line*)s_line;
 
-    if(strcmp(line_1, line_2) < 0)      return -1;
-    if(strcmp(line_1, line_2) > 0)      return 1;
-    return 0;
+    return strcmp(GetPoemLine(line_1->beg), GetPoemLine(line_2->beg));
 }
 
 Line* Parse(char* line_to_parse)
