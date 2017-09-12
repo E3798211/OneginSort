@@ -3,6 +3,7 @@
 #include <fstream>
 #include <cstring>
 #include <assert.h>
+#include <cctype>
 
 #define ERR_WHERE "In " << __FILE__ << ": " << __func__ << "(): " << ex.what()
 
@@ -48,6 +49,9 @@ int LinesCount(char* line_to_parse);
 /// Compares lines from the beginning.
 int BegComp(const void* f_line, const void* s_line);
 
+/// Compares lines from the end.
+int EndComp(const void* f_line, const void* s_line);
+
 /// Parses line.
 /**
     \param [in] line_to_parse Whole poem.
@@ -79,6 +83,9 @@ int main(int argc, char* argv[])
     Print(lines_positions, "Before");
     qsort(lines_positions, n_lines, sizeof(Line), BegComp);
     Print(lines_positions, "After BegComp");
+    qsort(lines_positions, n_lines, sizeof(Line), EndComp);
+    Print(lines_positions, "After EndComp");
+
 
     //Free the resourses
     delete [] poem_in_line;
@@ -173,6 +180,30 @@ int BegComp(const void* f_line, const void* s_line)
     Line* line_2 = (Line*)s_line;
 
     return strcmp(line_1->beg, line_2->beg);
+}
+
+int EndComp(const void* f_line, const void* s_line)
+{
+    Line* line_1 = (Line*)f_line;
+    Line* line_2 = (Line*)s_line;
+
+    char* ptr_1 = line_1->beg + line_1->lengh - 1;
+    char* ptr_2 = line_2->beg + line_2->lengh - 1;
+    while(ptr_1 != line_1->beg && ptr_2 != line_2->beg){
+        //Skipping punctuation
+        if(ispunct(*ptr_1))     ptr_1--;
+        if(ispunct(*ptr_2))     ptr_2--;
+
+        if((*ptr_1 - *ptr_2) > 0)           return 1;
+        else if((*ptr_1 - *ptr_2) < 0)      return -1;
+
+        ptr_1--;
+        ptr_2--;
+    }
+    //If we're here, lines are similar
+    if(line_1->lengh > line_2->lengh)         return 1;
+    else if(line_1->lengh > line_2->lengh)    return -1;
+    else                                    return 0;
 }
 
 Line* Parse(char* line_to_parse, int* n_lines)
