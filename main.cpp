@@ -6,10 +6,17 @@
 
 #define ERR_WHERE "In " << __FILE__ << ": " << __func__ << "(): " << ex.what()
 
+#if defined (_DEBUG)
+    #define DEBUG
+#else
+    #define DEBUG  if (0) 
+#endif
+
 const char POEM[] = "poem.txt";
 const int SORRY   = -1;
+const int HAPPY   =  0;  // :)
 
-using namespace std;
+using namespace std;  // нинада
 
 struct Line{
     int lengh = 0;
@@ -56,15 +63,10 @@ Line* Parse(char* line_to_parse);
 
 //================================================================
 
-
-int main(int argc, char* argv[])
+int main(int argc, const char* argv[])
 {
     //Checking if User wants to choose another file
-    const char* file_name = nullptr;
-    if(argc > 1)
-        file_name = argv[1];
-    else
-        file_name = POEM;
+    const char* file_name = (argc > 1)? argv[1] : POEM;
 
     //Reading from file
     char* poem_in_line = FileRead(file_name);
@@ -75,14 +77,21 @@ int main(int argc, char* argv[])
     Line* lines_positions = Parse(poem_in_line);
 
     Print(lines_positions, "Before");
+    
     qsort(lines_positions, LinesCount(poem_in_line), sizeof(Line), BegComp);
-    Print(lines_positions, "After");
+    Print(lines_positions, "After BegComp");
 
-    //Free the resourses
+    qsort(lines_positions, LinesCount(poem_in_line), sizeof(Line), EndComp);
+    Print(lines_positions, "After EndComp");
+
+    //Free the resources
+    
     delete [] poem_in_line;
     poem_in_line = nullptr;
     delete [] lines_positions;
     lines_positions = nullptr;
+    
+    return HAPPY;  // :)
 }
 
 //================================================================
@@ -91,25 +100,27 @@ char* FileRead(const char* file_name)
 {
     FILE *input = fopen(file_name, "r");
     if(input == nullptr){
-        cout << "File not found!" << endl;
+        DEBUG cout << "File not found!" << endl;
         return nullptr;
     }
 
     if(fseek(input, 0, SEEK_END)){
-        cout << "Can not set last position in " << file_name << endl;
+        DEBUG cout << "Can not set last position in " << file_name << endl;
         return nullptr;
     }
 
     int file_size = ftell(input);
     if(file_size == EOF){
-        cout << "Can not get pointer's position in " << file_name << endl;
+        DEBUG cout << "Can not get pointer's position in " << file_name << endl;
         return nullptr;
     }
 
     char* poem_in_line = nullptr;
+    
     try{
         poem_in_line = new char [file_size];
-    }catch(const bad_alloc& ex){
+    }
+    catch(const bad_alloc& ex){
         cout << ERR_WHERE << ". Cannot allocate " << file_size << " bytes." << endl;
         return nullptr;
     }
@@ -121,7 +132,7 @@ char* FileRead(const char* file_name)
     return poem_in_line;
 }
 
-char* GetPoemLine(char* line_beg)
+char* GetPoemLine(char* line_beg)  // Зачем это вообще? Она еще копию строки создает, и эта память потом не освобождается (см. ниже)
 {
     //Exceptions
     assert(line_beg != nullptr);
@@ -135,7 +146,7 @@ char* GetPoemLine(char* line_beg)
     char* line = nullptr;
     try{
         line = new char [line_len + 1];
-    }catch(const bad_alloc& ex){
+    }catch(const bad_alloc& ex){  // не надо так слеплять try-catch. See example above
         cout << ERR_WHERE << ". Cannot allocate " << line_len + 1 << " bytes." << endl;
         return nullptr;
     }
@@ -153,7 +164,7 @@ char* GetPoemLine(char* line_beg)
     return line;
 }
 
-int LinesCount(char* line_to_parse)
+int LinesCount(const char* line_to_parse)
 {
     int n_lines = 0;
     int pos_in_line = 0;
@@ -170,7 +181,7 @@ int BegComp(const void* f_line, const void* s_line)
     Line* line_1 = (Line*)f_line;
     Line* line_2 = (Line*)s_line;
 
-    return strcmp(GetPoemLine(line_1->beg), GetPoemLine(line_2->beg));
+    return strcmp(GetPoemLine(line_1->beg), GetPoemLine(line_2->beg));  // line_1->beg/end должно быть достаточно. Зачем эта GetPoemLine?
 }
 
 Line* Parse(char* line_to_parse)
