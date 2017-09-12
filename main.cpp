@@ -51,8 +51,9 @@ int BegComp(const void* f_line, const void* s_line);
 /// Parses line.
 /**
     \param [in] line_to_parse Whole poem.
+    \param [in] n_lines Amount of lines in a poem
 */
-Line* Parse(char* line_to_parse);
+Line* Parse(char* line_to_parse, int* n_lines);
 
 //================================================================
 
@@ -72,11 +73,12 @@ int main(int argc, char* argv[])
     if(poem_in_line == nullptr)
         return SORRY;
 
-    Line* lines_positions = Parse(poem_in_line);
+    int n_lines = LinesCount(poem_in_line);
+    Line* lines_positions = Parse(poem_in_line, &n_lines);
 
     Print(lines_positions, "Before");
-    qsort(lines_positions, LinesCount(poem_in_line), sizeof(Line), BegComp);
-    Print(lines_positions, "After");
+    qsort(lines_positions, n_lines, sizeof(Line), BegComp);
+    Print(lines_positions, "After BegComp");
 
     //Free the resourses
     delete [] poem_in_line;
@@ -170,22 +172,22 @@ int BegComp(const void* f_line, const void* s_line)
     Line* line_1 = (Line*)f_line;
     Line* line_2 = (Line*)s_line;
 
-    return strcmp(GetPoemLine(line_1->beg), GetPoemLine(line_2->beg));
+    return strcmp(line_1->beg, line_2->beg);
 }
 
-Line* Parse(char* line_to_parse)
+Line* Parse(char* line_to_parse, int* n_lines)
 {
     //Exceptions
     assert(line_to_parse != nullptr);
 
-    int n_lines = LinesCount(line_to_parse);
+    //int n_lines = LinesCount(line_to_parse);
 
     //Creating array with lines' coordinates
     Line* lines_positions = nullptr;
     try{
-        lines_positions = new Line [n_lines + 1];
+        lines_positions = new Line [*n_lines + 1];
     }catch(const bad_alloc& ex){
-        cout << ERR_WHERE << ". Cannot allocate " << n_lines + 1 << " bytes." << endl;
+        cout << ERR_WHERE << ". Cannot allocate " << *n_lines + 1 << " bytes." << endl;
         return nullptr;
     }
 
@@ -201,14 +203,16 @@ Line* Parse(char* line_to_parse)
             lines_positions[line_beg_num].beg = line_to_parse + pos_in_line + 1;
             lines_positions[line_beg_num - 1].lengh = lines_positions[line_beg_num].beg -
                                                       lines_positions[line_beg_num - 1].beg - 1;
+            //Ending line
+            line_to_parse[pos_in_line] = '\0';
             line_beg_num++;
         }
         pos_in_line++;
     }
     //Last one has wrong lengh
-    lines_positions[n_lines - 1].lengh = lines_positions[n_lines].beg - lines_positions[n_lines - 1].beg - 1;
+    lines_positions[*n_lines - 1].lengh = lines_positions[*n_lines].beg - lines_positions[*n_lines - 1].beg - 1;
     //Array with positions of lines ends with (nullptr) (used as terminator)
-    lines_positions[n_lines].beg = nullptr;
+    lines_positions[*n_lines].beg = nullptr;
 
     return lines_positions;
 }
@@ -222,7 +226,7 @@ void Print(Line* lines_positions, char* label)
     cout << "  !" << label << endl;
     int i = 0;
     while(lines_positions[i].beg != nullptr){
-        cout << GetPoemLine(lines_positions[i].beg) << endl;
+        cout << lines_positions[i].beg << endl;
         i++;
     }
 }
