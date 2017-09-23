@@ -25,12 +25,6 @@ struct Line{
 */
 char* FileRead(const char* file_name);
 
-/// Gets line from poem.
-/**
-    \param [in] line_beg Pointer to the beginning of the line.
-*/
-char* GetPoemLine(char* line_beg);
-
 /// Prints poem.
 /**
     \warning Overoaded
@@ -57,19 +51,17 @@ int EndComp(const void* f_line, const void* s_line);
     \param [in] line_to_parse Whole poem.
     \param [in] n_lines Amount of lines in a poem
 */
-Line* Parse(char* line_to_parse, int* n_lines);
+Line* Parse(char* line_to_parse, int n_lines);
 
 //================================================================
 
 
 int main(int argc, char* argv[])
 {
+    setlocale(LC_ALL, "rus");
+
     //Checking if User wants to choose another file
-    const char* file_name = nullptr;
-    if(argc > 1)
-        file_name = argv[1];
-    else
-        file_name = POEM;
+    const char* file_name = (argc > 1)? argv[1] : POEM;
 
     //Reading from file
     char* poem_in_line = FileRead(file_name);
@@ -78,11 +70,13 @@ int main(int argc, char* argv[])
         return SORRY;
 
     int n_lines = LinesCount(poem_in_line);
-    Line* lines_positions = Parse(poem_in_line, &n_lines);
+    Line* lines_positions = Parse(poem_in_line, n_lines);
 
     Print(lines_positions, "Before");
+
     qsort(lines_positions, n_lines, sizeof(Line), BegComp);
     Print(lines_positions, "After BegComp");
+
     qsort(lines_positions, n_lines, sizeof(Line), EndComp);
     Print(lines_positions, "After EndComp");
 
@@ -100,7 +94,7 @@ char* FileRead(const char* file_name)
 {
     FILE *input = fopen(file_name, "r");
     if(input == nullptr){
-        cout << "File not found!" << endl;
+        /*DEBUG*/ cout << "File not found!" << endl;
         return nullptr;
     }
 
@@ -118,7 +112,8 @@ char* FileRead(const char* file_name)
     char* poem_in_line = nullptr;
     try{
         poem_in_line = new char [file_size];
-    }catch(const bad_alloc& ex){
+    }
+    catch(const bad_alloc& ex){
         cout << ERR_WHERE << ". Cannot allocate " << file_size << " bytes." << endl;
         return nullptr;
     }
@@ -128,38 +123,6 @@ char* FileRead(const char* file_name)
 
     fclose(input);
     return poem_in_line;
-}
-
-char* GetPoemLine(char* line_beg)
-{
-    //Exceptions
-    assert(line_beg != nullptr);
-
-    //Counting line's length
-    int line_len = 0;
-    while(*(line_beg + line_len) != '\n' &&
-          *(line_beg + line_len) != '\0')
-        line_len++;
-
-    char* line = nullptr;
-    try{
-        line = new char [line_len + 1];
-    }catch(const bad_alloc& ex){
-        cout << ERR_WHERE << ". Cannot allocate " << line_len + 1 << " bytes." << endl;
-        return nullptr;
-    }
-
-    //Creating line
-    line_len = 0;
-    while(*(line_beg + line_len) != '\n' &&
-          *(line_beg + line_len) != '\0'){
-        line[line_len] = *(line_beg + line_len);
-        line_len++;
-    }
-    //Last character is '\0'
-    line[line_len] = '\0';
-
-    return line;
 }
 
 int LinesCount(char* line_to_parse)
@@ -194,19 +157,19 @@ int EndComp(const void* f_line, const void* s_line)
         if(ispunct(*ptr_1))     ptr_1--;
         if(ispunct(*ptr_2))     ptr_2--;
 
-        if((*ptr_1 - *ptr_2) > 0)           return 1;
-        else if((*ptr_1 - *ptr_2) < 0)      return -1;
+        if     ((*ptr_1 - *ptr_2) > 0)          return 1;
+        else if((*ptr_1 - *ptr_2) < 0)          return -1;
 
         ptr_1--;
         ptr_2--;
     }
     //If we're here, lines are similar
-    if(line_1->lengh > line_2->lengh)         return 1;
-    else if(line_1->lengh > line_2->lengh)    return -1;
-    else                                    return 0;
+    if     (line_1->lengh < line_2->lengh)      return 1;
+    else if(line_1->lengh > line_2->lengh)      return -1;
+    else                                        return 0;
 }
 
-Line* Parse(char* line_to_parse, int* n_lines)
+Line* Parse(char* line_to_parse, int n_lines)
 {
     //Exceptions
     assert(line_to_parse != nullptr);
@@ -216,9 +179,10 @@ Line* Parse(char* line_to_parse, int* n_lines)
     //Creating array with lines' coordinates
     Line* lines_positions = nullptr;
     try{
-        lines_positions = new Line [*n_lines + 1];
-    }catch(const bad_alloc& ex){
-        cout << ERR_WHERE << ". Cannot allocate " << *n_lines + 1 << " bytes." << endl;
+        lines_positions = new Line [n_lines + 1];
+    }
+    catch(const bad_alloc& ex){
+        cout << ERR_WHERE << ". Cannot allocate " << n_lines + 1 << " bytes." << endl;
         return nullptr;
     }
 
@@ -241,9 +205,9 @@ Line* Parse(char* line_to_parse, int* n_lines)
         pos_in_line++;
     }
     //Last one has wrong lengh
-    lines_positions[*n_lines - 1].lengh = lines_positions[*n_lines].beg - lines_positions[*n_lines - 1].beg - 1;
+    lines_positions[n_lines - 1].lengh = lines_positions[n_lines].beg - lines_positions[n_lines - 1].beg - 1;
     //Array with positions of lines ends with (nullptr) (used as terminator)
-    lines_positions[*n_lines].beg = nullptr;
+    lines_positions[n_lines].beg = nullptr;
 
     return lines_positions;
 }
@@ -261,4 +225,5 @@ void Print(Line* lines_positions, char* label)
         i++;
     }
 }
+
 
